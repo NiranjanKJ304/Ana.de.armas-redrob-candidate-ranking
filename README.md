@@ -11,6 +11,8 @@ An offline, CPU-only pipeline that ranks **100,000+ candidates** against a job d
 >    ```bash
 >    python load_model.py
 >    ```
+>
+> - [ensure (#candidates.jsonl) file inside a project folder]
 > 3. **Run the ranking pipeline:**
 >    ```bash
 >    python run.py
