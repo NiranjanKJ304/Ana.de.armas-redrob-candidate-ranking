@@ -1,0 +1,33 @@
+
+Senior AI Engineer — Founding Team at Redrob AI (Series A AI-native talent intelligence platform).
+Location: Pune/Noida, India (Hybrid). Experience Required: 5-9 years.
+
+We need someone who is simultaneously comfortable with deep technical depth in modern ML systems
+(embeddings, retrieval, ranking, LLMs, fine-tuning) and a scrappy product-engineering attitude —
+willing to ship a working ranker quickly to learn from real users.
+
+What you'd actually be doing: own the intelligence layer of Redrob's product. The ranking,
+retrieval, and matching systems that decide what recruiters see when they search for candidates.
+
+Things you absolutely need:
+- Production experience with embeddings-based retrieval systems (sentence-transformers, BGE, E5)
+  deployed to real users. Handling embedding drift, index refresh, retrieval-quality regression.
+- Production experience with vector databases or hybrid search infrastructure (FAISS, Pinecone,
+  Weaviate, Qdrant, Milvus, OpenSearch, Elasticsearch).
+- Strong Python. Code quality matters.
+- Hands-on experience designing evaluation frameworks for ranking systems (NDCG, MRR, MAP, A/B testing).
+
+Things we'd like: LLM fine-tuning (LoRA, QLoRA, PEFT), learning-to-rank models (XGBoost),
+HR-tech/recruiting tech exposure, distributed systems, open-source AI/ML contributions.
+
+Disqualifiers:
+- Pure research/academic backgrounds with no production deployment.
+- AI experience primarily from recent LangChain/OpenAI API projects (under 12 months).
+- Senior engineers who haven't written production code in last 18 months (architecture/tech lead only).
+- Title-chasers switching every 1.5 years.
+- Entire career at consulting firms (TCS, Infosys, Wipro, Accenture, Cognizant, Capgemini).
+- Primary expertise in computer vision, speech, or robotics without NLP/IR exposure.
+
+Ideal candidate: 6-8 years total, 4-5 in applied ML/AI at product companies. Has shipped end-to-end
+ranking/search/recommendation systems. Strong opinions on retrieval, evaluation, LLM integration.
+Located in or willing to relocate to India (Noida/Pune preferred). Active on platform.
