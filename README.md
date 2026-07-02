@@ -13,9 +13,23 @@ An offline, CPU-only pipeline that ranks **100,000+ candidates** against a job d
 >    ```
 ensure **candidates.jsonl** file inside a project folder
 > 3. **Run the ranking pipeline:**
+>    *(Ensure `candidates.jsonl` is in the project root or `data/` directory or inside a project directory)*
 >    ```bash
 >    python run.py
 >    ```
+>    *Or specify a custom path to `candidates.jsonl`:*
+>    ```bash
+>    python run.py --candidates <path_to_candidates.jsonl>
+>    ```
+>    *Expected run output:*
+>    ```text
+>    Pipeline completed successfully.
+>    Processed Candidates: 100000
+>    Time Taken:           232.8 seconds with in 3.8 mintues 
+>    Output File:          output\submission.csv
+>    ```
+
+*The generated final results will be saved in the `output/` directory as `submission.csv`.*
 
 ### 🎬 Demo Videos
 

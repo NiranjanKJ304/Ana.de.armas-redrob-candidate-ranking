@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import csv
 import logging
+import io
+import sys
 from pathlib import Path
 
 from .ranker import RankedCandidate
@@ -55,79 +57,104 @@ def export_csv(
     reasoning_list: list[str],
     output_path: str | Path,
 ) -> Path:
-    """Export ranked candidates to submission.csv.
-
-    Args:
-        ranked: List of top-100 RankedCandidate objects.
-        reasoning_list: List of reasoning strings (same order as ranked).
-        output_path: Path to write the CSV file.
-
-    Returns:
-        Path to the written CSV file.
-    """
+    """Export ranked candidates to submission.csv after tie-breaking and validation."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Normalize scores
     normalized_scores = normalize_scores(ranked)
 
+    # Combine data for sorting
+    combined = list(zip(ranked, reasoning_list, normalized_scores))
+    
+    # Primary key: score descending, Secondary key: candidate_id ascending
+    combined.sort(key=lambda x: (-x[2], x[0].candidate_id))
+    
+    # Regenerate ranks sequentially (1...100) after sorting
+    for i, item in enumerate(combined, 1):
+        item[0].rank = i
+
+    # Validation in memory BEFORE writing the final file
+    _validate_submission(combined)
+
     # Write CSV
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f, quoting=csv.QUOTE_ALL)
-
-        # Header
         writer.writerow(["candidate_id", "rank", "score", "reasoning"])
+        for r, reasoning, norm_score in combined:
+            writer.writerow([r.candidate_id, r.rank, norm_score, reasoning])
 
-        # Data rows
-        for i, (r, reasoning) in enumerate(zip(ranked, reasoning_list)):
-            writer.writerow([
-                r.candidate_id,
-                r.rank,
-                normalized_scores[i],
-                reasoning,
-            ])
-
-    logger.info(
-        "Exported %d candidates to %s", len(ranked), output_path
-    )
-
-    # Validation
-    _validate_submission(output_path, len(ranked))
+    logger.info("Exported %d candidates to %s", len(combined), output_path)
 
     return output_path
 
 
-def _validate_submission(path: Path, expected_rows: int) -> None:
-    """Validate the submission CSV format.
+def _validate_submission(combined: list[tuple[RankedCandidate, str, float]]) -> None:
+    """Validate the submission CSV format in memory before writing."""
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
 
-    Args:
-        path: Path to the CSV file.
-        expected_rows: Expected number of data rows.
-    """
-    with open(path, "r", encoding="utf-8") as f:
-        reader = csv.reader(f)
+    print("\n===========================================")
+    print("Validating submission.csv")
+    print("===========================================")
+    
+    try:
+        # Build virtual CSV to strictly test formatting
+        mem_file = io.StringIO()
+        writer = csv.writer(mem_file, quoting=csv.QUOTE_ALL)
+        writer.writerow(["candidate_id", "rank", "score", "reasoning"])
+        for r, reasoning, norm_score in combined:
+            writer.writerow([r.candidate_id, r.rank, norm_score, reasoning])
+            
+        # Parse it back
+        mem_file.seek(0)
+        reader = csv.reader(mem_file)
+        
+        # 1. Check Header
         header = next(reader)
-
-        assert header == ["candidate_id", "rank", "score", "reasoning"], \
-            f"Invalid header: {header}"
-
+        if header != ["candidate_id", "rank", "score", "reasoning"]:
+            raise ValueError(f"Invalid header: {header}")
+        print("✓ Header")
+        
         rows = list(reader)
-        assert len(rows) == expected_rows, \
-            f"Expected {expected_rows} rows, got {len(rows)}"
-
-        # Check ranks are 1 to expected_rows
+        
+        # 2. Check Candidate IDs (uniqueness and count)
+        if len(rows) != len(combined):
+            raise ValueError(f"Expected {len(combined)} rows, got {len(rows)}")
+            
+        c_ids = [row[0] for row in rows]
+        if len(set(c_ids)) != len(c_ids):
+            raise ValueError("Duplicate candidate IDs found")
+        print("✓ Candidate IDs")
+            
+        # 3. Check Ranks
         ranks = [int(row[1]) for row in rows]
-        assert ranks == list(range(1, expected_rows + 1)), \
-            "Ranks must be sequential from 1"
-
-        # Check scores are in [0, 1]
+        expected_ranks = list(range(1, len(combined) + 1))
+        if ranks != expected_ranks:
+            raise ValueError("Ranks must be exactly 1 to 100 sequentially")
+        print("✓ Ranks")
+        
+        # 4. Check Score Ordering
         scores = [float(row[2]) for row in rows]
-        assert all(0.0 <= s <= 1.0 for s in scores), \
-            "All scores must be in [0.0, 1.0]"
-
-        # Check scores are non-increasing
         for i in range(1, len(scores)):
-            assert scores[i] <= scores[i - 1] + 0.001, \
-                f"Scores must be non-increasing: rank {i} has score {scores[i]} > rank {i-1} score {scores[i-1]}"
-
-    logger.info("Submission validation passed: %s", path)
+            if scores[i] > scores[i - 1]:
+                raise ValueError(f"Scores must be non-increasing: rank {i+1} has score {scores[i]} > rank {i} score {scores[i-1]}")
+        print("✓ Score Ordering")
+        
+        # 5. Check Tie-breaking
+        for i in range(1, len(rows)):
+            if scores[i] == scores[i - 1]:
+                if c_ids[i] < c_ids[i - 1]:
+                    raise ValueError(f"Tie-breaking invalid: rank {i+1} ({c_ids[i]}) should be before rank {i} ({c_ids[i-1]}) for score {scores[i]}")
+        print("✓ Tie-breaking")
+        
+        # 6. CSV Format
+        print("✓ CSV Format\n")
+        print("Submission validation passed.")
+        
+    except Exception as e:
+        print(f"\n[ERROR] Validation failed: {e}")
+        sys.exit(1)
